@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>高知市 散歩コースメーカー</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    #map { height: 90vh; }
+    #controls {
+      padding: 10px;
+      background: #f5f5f5;
+    }
+  </style>
+</head>
+<body>
+
+<div id="controls">
+  距離(km):
+  <input type="number" id="distance" value="3" step="0.5">
+  <button onclick="createRoute()">散歩コース作成</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // 高知城（スタート地点）
+  const start = [33.5597, 133.5311];
+
+  const map = L.map('map').setView(start, 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  let routeLayer;
+
+  function createRoute() {
+    const distanceKm = Number(document.getElementById('distance').value);
+    const distanceM = distanceKm * 1000;
+
+    // 簡易的に三角形の周回ルートを作る
+    const offset = distanceM / 30000; // 緯度経度調整用
+
+    const points = [
+      start,
+      [start[0] + offset, start[1] + offset],
+      [start[0] - offset, start[1] + offset],
+      start
+    ];
+
+    const coords = points
+      .map(p => `${p[1]},${p[0]}`)
+      .join(';');
+
+    const url = `https://router.project-osrm.org/route/v1/foot/${coords}?overview=full&geometries=geojson`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        if (routeLayer) map.removeLayer(routeLayer);
+
+        routeLayer = L.geoJSON(data.routes[0].geometry, {
+          style: { color: 'blue', weight: 5 }
+        }).addTo(map);
+
+        map.fitBounds(routeLayer.getBounds());
+      });
+  }
+
+  L.marker(start).addTo(map).bindPopup("スタート：高知城");
+</script>
+
+</body>
+</html>
